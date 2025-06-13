@@ -1,0 +1,873 @@
+{
+  "name": "Bruno",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const data = $input.all()[0].json;\nconst commits = data.body?.commits || [];\nconst arquivosSet = new Set(); // Usando um Set para armazenar nomes de arquivos únicos\n\n// Função auxiliar para adicionar arquivos ao Set\nconst adicionarArquivos = (arquivos) => {\n  if (arquivos) {\n    arquivos.forEach(arquivo => arquivosSet.add(arquivo));\n  }\n};\n\n// Verifica todos os commits\ncommits.forEach(commit => {\n  adicionarArquivos(commit.added);\n  adicionarArquivos(commit.modified);\n  adicionarArquivos(commit.removed);\n});\n\n// Também verifica o head_commit\nconst headCommit = data.body?.head_commit;\nif (headCommit) {\n  adicionarArquivos(headCommit.added);\n  adicionarArquivos(headCommit.modified);\n  adicionarArquivos(headCommit.removed);\n}\n\n// Se não encontrar nenhum arquivo único\nif (!arquivosSet.size) {\n  return [{ json: { erro: \"Nenhum arquivo encontrado (added, modified ou removed).\" } }];\n}\n\n// Gera os raw URLs para os arquivos únicos\nreturn Array.from(arquivosSet).map(nome => ({\n  json: {\n    nome,\n    raw_url: `https://raw.githubusercontent.com/brunocmt85/projeto_mestrado/main/${nome}`\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2520,
+        -1040
+      ],
+      "id": "b0c4c760-c61d-48f3-a618-753b2aa85cb6",
+      "name": "Code",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "html": "{{ $json[\"output\"] }}\n<p><strong>Data:</strong> {{ $now }}\n"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -1220,
+        -1240
+      ],
+      "id": "5171d043-0910-4822-8805-eab0d99cb6dd",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "936eed16-ac3a-4c5f-ac1d-aec68907f8bb",
+              "leftValue": "={{$node[\"AI Agent Detector\"].json.output.trim().toLowerCase()}}",
+              "rightValue": "sim",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1880,
+        -1040
+      ],
+      "id": "82681710-e378-42d0-8305-75b09b623d08",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -2280,
+        -860
+      ],
+      "id": "0e7d46ee-6cfd-4186-ae57-0e7a72a924cb",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "gspN1yNEkJyq4AeY",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -1560,
+        -1080
+      ],
+      "id": "19840e02-3b50-4854-ba18-15b9dda890d7",
+      "name": "Groq Chat Model1",
+      "credentials": {
+        "groqApi": {
+          "id": "gspN1yNEkJyq4AeY",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Você é um especialista em engenharia de software com foco em desempenho e gerenciamento de memória.\n\nAnalise cuidadosamente o código a seguir:\n{{ $node[\"If\"].json[\"data\"] }}.\n\nSua tarefa é:\n\n1. Refatorar o código de forma clara e eficiente, eliminando qualquer causa de vazamento de memória.\n2. Garantir que os recursos (como memória, arquivos, conexões ou listeners) sejam liberados corretamente.\n3. O código final deve manter a lógica original, mas ser mais seguro e eficiente. \n\nRetorne:\n- O **código refatorado**.\n- Uma breve **explicação das mudanças feitas**, com foco em como elas resolvem os vazamentos de memória.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -1520,
+        -1240
+      ],
+      "id": "87c00378-eebb-4ee4-b846-ab91c4db6613",
+      "name": "AI Agent Refatorador"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "github_push_session",
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -2160,
+        -860
+      ],
+      "id": "aa124bb9-52dd-43da-939d-4b9760ea6800",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "owner": {
+          "__rl": true,
+          "value": "brunocmt85",
+          "mode": "list",
+          "cachedResultName": "brunocmt85",
+          "cachedResultUrl": "https://github.com/brunocmt85"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "projeto_mestrado",
+          "mode": "list",
+          "cachedResultName": "projeto_mestrado",
+          "cachedResultUrl": "https://github.com/brunocmt85/projeto_mestrado"
+        },
+        "events": [
+          "push"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.githubTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2740,
+        -1040
+      ],
+      "id": "4d8da715-5758-48ca-992f-eaf78e460b09",
+      "name": "Github Trigger",
+      "webhookId": "5854ca32-b9ab-4d65-8c6a-385d2acaf237",
+      "credentials": {
+        "githubApi": {
+          "id": "N6cSVyZ23IVrIZC8",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2280,
+        -1520
+      ],
+      "id": "9e659f8a-7960-4191-bf84-3a5c84d158ab",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "4rfzsVkAjvwd3aLO",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert"
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.1,
+      "position": [
+        -2060,
+        -1520
+      ],
+      "id": "73ee4099-69b2-44ae-b2ec-aa7bac4d12b0",
+      "name": "Simple Vector Store"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        -1980,
+        -1340
+      ],
+      "id": "97d4c7ad-0ba4-4036-8e21-29fca6dd5fa4",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkSize": 1500,
+        "chunkOverlap": 200,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -1920,
+        -1200
+      ],
+      "id": "3d34be85-243c-4200-aa16-e425096b5344",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.raw_url + '?nocache=' + $now}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2380,
+        -1040
+      ],
+      "id": "f78e4260-301c-4b19-9b64-06d1b1cccc96",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        -2120,
+        -1340
+      ],
+      "id": "e5dc1a7d-cf36-4135-99f3-c655c32ba410",
+      "name": "Embeddings HuggingFace Inference",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "0C8eUpuqRbIFTPS0",
+          "name": "HuggingFaceApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "vazamento_agent1",
+        "toolDescription": "Antes de responder, consulte a base de conhecimento técnica (armazenada no vetor conectado)"
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.1,
+      "position": [
+        -2040,
+        -840
+      ],
+      "id": "fb24b35b-845b-4dab-ab80-0a2584f43476",
+      "name": "Simple Vector Store1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        -2100,
+        -700
+      ],
+      "id": "b22878df-21d1-4063-b38d-61f2d655f080",
+      "name": "Embeddings HuggingFace Inference1",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "0C8eUpuqRbIFTPS0",
+          "name": "HuggingFaceApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI",
+          "mode": "list",
+          "cachedResultName": "n8n - RAG",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2520,
+        -1620
+      ],
+      "id": "062cf53f-c060-474b-a31c-39a461be9aa4",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "4rfzsVkAjvwd3aLO",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI",
+          "mode": "list",
+          "cachedResultName": "n8n - RAG",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2520,
+        -1440
+      ],
+      "id": "8e0f4c6a-de1f-4cf9-a75d-5202b3079a4b",
+      "name": "Google Drive Trigger1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "4rfzsVkAjvwd3aLO",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "github_push_session",
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1400,
+        -1020
+      ],
+      "id": "5a2632c1-759d-43ef-a983-b30086c0b833",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "={{ $json.output.toString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -1060,
+        -1240
+      ],
+      "id": "1c3c56a6-8cff-4f4e-9e5d-e79973349ddd",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "createFromText",
+        "content": "=={{ $node[\"HTML\"].json[\"html\"] }}",
+        "name": "={{ \"vazamento_\" + new Date().toISOString().split('T')[0] + \"_\" + new Date().toISOString().split('T')[1].split('.')[0].replace(/:/g, \"-\") + \".txt\" }}\n\n",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI",
+          "mode": "list",
+          "cachedResultName": "n8n - RAG",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -880,
+        -1240
+      ],
+      "id": "ba28d145-8a18-4bd7-9ebf-3a208c7b901b",
+      "name": "Google Drive1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "4rfzsVkAjvwd3aLO",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=IMPORTANTE: Você deve usar a ferramenta conectada antes de responder. Não responda diretamente sem usar a base vetorial.\n\nVocê é um assistente especializado em identificar vazamento de memória em código-fonte.\n\nAnalise o seguinte código:\n\n{{ $json.data }}\n\nCom base na análise, responda **apenas com uma única palavra**:\n- Responda apenas \"Sim\" se o código apresenta vazamento de memória.\n- Responda apenas \"Não\" se o código **não** apresenta vazamento de memória.\n\n**Não adicione explicações, código, justificativas ou qualquer outro conteúdo. Apenas \"Sim\" ou \"Não\".**\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -2220,
+        -1040
+      ],
+      "id": "35b38a72-beeb-49b0-9931-2c8eeed3a537",
+      "name": "AI Agent Detector"
+    },
+    {
+      "parameters": {
+        "operation": "createFromText",
+        "content": "={{ $node[\"HTTP Request1\"].json.data }}",
+        "name": "={{ \"nao_vazamento_\" + new Date().toISOString().split('T')[0] + \"_\" + new Date().toISOString().split('T')[1].split('.')[0].replace(/:/g, \"-\") + \".txt\" }}\n\n",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI",
+          "mode": "list",
+          "cachedResultName": "n8n - RAG",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1600,
+        -900
+      ],
+      "id": "1aff9da8-3b72-45af-a5b7-f867fc58ba8f",
+      "name": "Google Drive3",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "4rfzsVkAjvwd3aLO",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "vazamento_agent2",
+        "toolDescription": "Antes de responder, consulte a base de conhecimento técnica (armazenada no vetor conectado)"
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.1,
+      "position": [
+        -1260,
+        -1000
+      ],
+      "id": "0390b5d5-18c2-4325-b651-ac4fa53b430d",
+      "name": "Simple Vector Store2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        -780
+      ],
+      "id": "0b463f51-38d0-423c-9223-c3f00dcc205d",
+      "name": "Embeddings HuggingFace Inference2",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "0C8eUpuqRbIFTPS0",
+          "name": "HuggingFaceApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "owner": {
+          "__rl": true,
+          "value": "brunocmt85",
+          "mode": "list",
+          "cachedResultName": "brunocmt85",
+          "cachedResultUrl": "https://github.com/brunocmt85"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "projeto_mestrado",
+          "mode": "list",
+          "cachedResultName": "projeto_mestrado",
+          "cachedResultUrl": "https://github.com/brunocmt85/projeto_mestrado"
+        },
+        "title": "🚨 Vazamento de Memória Detectado",
+        "body": "=*Issue criada automaticamente via n8n.*\n\nA análise automática identificou um possível vazamento de memória e gerou uma proposta de refatoração.\n🧠 Agente IA: Groq + n8n  \n📦 Repositório RAG: [Repositório Google Drive](https://drive.google.com/drive/folders/1oO8EWFloPbN0PcPV93i9qgN0pte2WYGI)\n🛠️ Código Fonte Refatorado:\n{{ $node[\"AI Agent Refatorador\"].json[\"output\"] }}\n\n📄 Código Fonte Original: \n```python\n{{ $node[\"HTTP Request1\"].json[\"data\"] }}",
+        "labels": [],
+        "assignees": []
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        -720,
+        -1240
+      ],
+      "id": "87e8ef9a-3a0a-4a42-a31a-d5d3a63d63e9",
+      "name": "GitHub",
+      "webhookId": "b567b691-ef5d-4152-8507-c584c52cd79e",
+      "credentials": {
+        "githubApi": {
+          "id": "N6cSVyZ23IVrIZC8",
+          "name": "GitHub account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Refatorador",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Drive3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Detector",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Refatorador",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Refatorador": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent Detector",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Github Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent Detector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Detector",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent Refatorador",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Google Drive1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Detector": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Vector Store2": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Refatorador",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive1": {
+      "main": [
+        [
+          {
+            "node": "GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a1e833ef-6940-4130-810c-2d675545f1ef",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3bfd83d1da9016d74e172089e63f8378293b2aa49aa3d969d1f15cb0522572ee"
+  },
+  "id": "R83sJ5HwpZwVLe3B",
+  "tags": [
+    {
+      "createdAt": "2025-06-01T17:22:57.144Z",
+      "updatedAt": "2025-06-01T17:22:57.144Z",
+      "id": "5cwgT4xXsaDtM8Rt",
+      "name": "Bot"
+    },
+    {
+      "createdAt": "2025-06-01T17:22:57.104Z",
+      "updatedAt": "2025-06-01T17:22:57.104Z",
+      "id": "FOWGzBo58fQl6I0y",
+      "name": "IA"
+    },
+    {
+      "createdAt": "2025-06-01T17:22:57.135Z",
+      "updatedAt": "2025-06-01T17:22:57.135Z",
+      "id": "XOTvSIe5X4wqsXw5",
+      "name": "Agente IA"
+    },
+    {
+      "createdAt": "2025-06-01T17:22:57.164Z",
+      "updatedAt": "2025-06-01T17:22:57.164Z",
+      "id": "cCyYW72DnG8SnOTP",
+      "name": "Master Class"
+    },
+    {
+      "createdAt": "2025-06-01T17:22:57.154Z",
+      "updatedAt": "2025-06-01T17:22:57.154Z",
+      "id": "yDY4JGGordPn181d",
+      "name": "TECH.IA"
+    }
+  ]
+}
